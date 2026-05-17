@@ -88,7 +88,7 @@ async function enviar(txt){
   addMsg('user',t);addTyping();
   try{
     var msgs=historial.slice(0,-1).concat([{role:'user',content:t}]);
-    var r=await fetch('/api/chat',{
+    var r=await fetch('https://agente-logistico-api.onrender.com/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYS,messages:msgs})
