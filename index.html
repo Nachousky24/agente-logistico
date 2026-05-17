@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agente Logístico IA</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#03080d;color:#e2eaf0;height:100vh;display:flex;flex-direction:column}
+.header{background:#060d14;border-bottom:1px solid #0a2030;padding:14px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:18px;font-weight:700;color:#00c9ff}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;background:#00c9ff15;border:1px solid #00c9ff30;color:#00c9ff}
+.dot{width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;animation:blink 2s infinite;margin-left:auto}
+.status{font-size:11px;color:#3a6a7a}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:10px;max-width:80%}
+.msg.user{flex-direction:row-reverse;align-self:flex-end}
+.msg.bot{align-self:flex-start}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.msg.bot .avatar{background:#00c9ff15;border:1px solid #00c9ff30}
+.msg.user .avatar{background:#0d2233;border:1px solid #1a3a4a}
+.bubble{padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;white-space:pre-wrap}
+.msg.bot .bubble{background:#060d14;border:1px solid #0a2030;color:#c8dde8}
+.msg.user .bubble{background:#0d2233;border:1px solid #1a3a4a;color:#a8c8d8}
+.quick{padding:10px 20px;display:flex;gap:8px;overflow-x:auto;border-top:1px solid #0a2030;background:#060d14}
+.quick::-webkit-scrollbar{display:none}
+.qbtn{white-space:nowrap;font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid #0a2030;background:transparent;color:#4a7a9b;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+.qbtn:hover{border-color:#00c9ff40;color:#00c9ff}
+.input-area{padding:14px 20px;border-top:1px solid #0a2030;background:#060d14;display:flex;gap:10px}
+.input{flex:1;background:#08131a;border:1px solid #0a2030;border-radius:24px;padding:10px 18px;color:#e2eaf0;font-size:14px;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s}
+.input:focus{border-color:#00c9ff40}
+.input::placeholder{color:#2a4a5e}
+.send{width:40px;height:40px;border-radius:50%;background:#00c9ff;border:none;cursor:pointer;font-size:16px;transition:all .2s;flex-shrink:0}
+.send:hover{background:#00b0e0;transform:scale(1.05)}
+.send:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.typing{display:flex;gap:4px;padding:4px 0;align-items:center}
+.typing span{width:7px;height:7px;border-radius:50%;background:#4a7a9b;animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="logo">LogisticaIA</span>
+  <span class="tag">AGENTE</span>
+  <div class="dot" style="margin-left:auto"></div>
+  <span class="status" style="margin-left:6px">En línea</span>
+</div>
+<div class="messages" id="msgs"></div>
+<div class="quick">
+  <button class="qbtn" onclick="send('Optimiza ruta de 10 entregas en Santiago con 2 vehículos')">🗺️ Optimizar ruta</button>
+  <button class="qbtn" onclick="send('Audita mi inventario de 300 SKUs con stock para 5 días')">📦 Auditar inventario</button>
+  <button class="qbtn" onclick="send('Necesito importar mercancía desde China a Chile, ¿qué necesito?')">🚢 Importación</button>
+  <button class="qbtn" onclick="send('Mi proveedor falló, tengo stock para 3 días. Plan de contingencia')">⚡ Contingencia</button>
+  <button class="qbtn" onclick="send('¿Cuánto stock debo comprar para diciembre considerando que las ventas suben 40%?')">📈 Forecast</button>
+</div>
+<div class="input-area">
+  <input class="input" id="inp" placeholder="Define tu objetivo logístico..." onkeydown="if(event.key==='Enter')send()"/>
+  <button class="send" id="btn" onclick="send()">➤</button>
+</div>
+<script>
+const API_KEY="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";
+const SYSTEM=Eres LogisticaIA, agente experto en logística y cadena de suministro en Latinoamérica. Cuando recibas un objetivo: 1) Analízalo, 2) Descompónlo en pasos ejecutables, 3) Da KPIs y métricas concretas, 4) Termina con próximos pasos. Responde en español, sé específico y profesional.;
+const msgs=[];
+function addMsg(role,text){
+  msgs.push({role,content:text});
+  const d=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className='msg '+(role==='user'?'user':'bot');
+  div.innerHTML=<div class="avatar">${role==='user'?'👤':'🤖'}</div><div class="bubble">${text}</div>;
+  d.appendChild(div);
+  d.scrollTop=d.scrollHeight;
+}
+function addTyping(){
+  const d=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className='msg bot';div.id='typing';
+  div.innerHTML=<div class="avatar">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>;
+  d.appendChild(div);d.scrollTop=d.scrollHeight;
+}
+async function send(text){
+  const inp=document.getElementById('inp');
+  const btn=document.getElementById('btn');
+  const t=text||inp.value.trim();
+  if(!t)return;
+  inp.value='';btn.disabled=true;
+  addMsg('user',t);addTyping();
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM,messages:msgs.slice(0,-1).concat([{role:'user',content:t}])})
+    });
+    const data=await r.json();
+    document.getElementById('typing')?.remove();
+    addMsg('assistant',data.content?.map(b=>b.text||'').join('')||'Error en respuesta');
+  }catch(e){
+    document.getElementById('typing')?.remove();
+    addMsg('assistant','⚠️ Error de conexión. Intenta de nuevo.');
+  }
+  btn.disabled=false;
+}
+addMsg('assistant','¡Hola! 👋 Soy tu Agente Logístico IA. Define un objetivo y lo ejecuto de principio a fin.\n\nPuedes escribir directamente o usar los botones de acceso rápido abajo. 🚀');
+</script>
+</body>
+</html>
